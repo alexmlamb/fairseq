@@ -609,9 +609,10 @@ class TransformerDecoder(FairseqIncrementalDecoder):
                 [nn.ModuleList([self.build_decoder_layer(args, no_encoder_attn, layer_ind=layer_ind) for _ in range(num_functions)]) for layer_ind in range(0,2)]
             )
 
+            shared_layer = nn.ModuleList([self.build_decoder_layer(args, no_encoder_attn, layer_ind=2)] for _ in range(num_functions))
+
             for k in range(2, args.decoder_layers):
-                self.layers.extend([nn.ModuleList([self.build_decoder_layer(args, no_encoder_attn, layer_ind=2) for _ in range(num_functions)])])
-            
+                self.layers.extend([shared_layer])
 
         else:
             self.layers.extend(
