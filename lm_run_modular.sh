@@ -18,7 +18,7 @@ python3 fairseq_cli/train.py  --task language_modeling \
   --max-tokens 2048 --update-freq 8 \
   --fp16 \
   --max-update 50000 \
-  --num_modules 4 \
+  --num_modules 1 \
   --use_module_communication true \
   --no-epoch-checkpoints \
   --num-workers 6 \
