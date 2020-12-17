@@ -835,7 +835,8 @@ class TransformerDecoder(FairseqIncrementalDecoder):
 
             w = []
             for func in xfuncs:
-                w.append(layer[0].func_weight_2(F.relu(layer[0].func_weight_1(func))))
+                w.append(func.func_weight(func))
+                #w.append(layer[0].func_weight_2(F.relu(layer[0].func_weight_1(func))))
             wts = F.softmax(torch.dstack(w), dim=2)
             x = torch.einsum('btem,btm->bte', torch.stack(xfuncs, 3), wts)
             # x = xfuncs[0] # Just picking first function
