@@ -598,8 +598,8 @@ class TransformerDecoder(FairseqIncrementalDecoder):
         else:
             self.layers = nn.ModuleList([])
 
-        self.num_functions = 2
-        shared_params = False
+        self.num_functions = args.numfuncs
+        shared_params = args.share_parameters
         print('sharing params across layers?', shared_params)
         print('num functions?', self.num_functions)
 
@@ -609,7 +609,7 @@ class TransformerDecoder(FairseqIncrementalDecoder):
                 [nn.ModuleList([self.build_decoder_layer(args, no_encoder_attn, layer_ind=layer_ind) for _ in range(self.num_functions)]) for layer_ind in range(0,2)]
             )
 
-            shared_layer = nn.ModuleList([self.build_decoder_layer(args, no_encoder_attn, layer_ind=2)] for _ in range(self.num_functions))
+            shared_layer = nn.ModuleList([self.build_decoder_layer(args, no_encoder_attn, layer_ind=2) for _ in range(self.num_functions)])
 
             for k in range(2, args.decoder_layers):
                 self.layers.extend([shared_layer])
@@ -833,8 +833,12 @@ class TransformerDecoder(FairseqIncrementalDecoder):
 
                 xfuncs.append(x_func)
 
-            x = xfuncs[0] #TODO: just taking first function for next layer, but should really pick with softmax or something.  
-
+            w = []
+            for func in xfuncs:
+                w.append(layer[0].func_weight_2(F.relu(layer[0].func_weight_1(func))))
+            wts = F.softmax(torch.dstack(w), dim=2)
+            x = torch.einsum('btem,btm->bte', torch.stack(xfuncs, 3), wts)
+            # x = xfuncs[0] # Just picking first function
             if layer_attn is not None and idx == alignment_layer:
                 attn = layer_attn.float().to(x)
 

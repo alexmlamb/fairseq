@@ -228,6 +228,7 @@ def get_parser(desc, default_task="translation"):
     parser.add_argument('--tpu', action='store_true', help='use TPU instead of CUDA')
     parser.add_argument('--bf16', action='store_true', help='use bfloat16; implies --tpu')
     parser.add_argument('--fp16', action='store_true', help='use FP16')
+    parser.add_argument('--share_parameters', action='store_true', help='use FP16')
     parser.add_argument('--memory-efficient-bf16', action='store_true',
                         help='use a memory-efficient version of BF16 training; implies --bf16')
     parser.add_argument('--memory-efficient-fp16', action='store_true',
@@ -253,6 +254,9 @@ def get_parser(desc, default_task="translation"):
     parser.add_argument('--model-parallel-size', type=int, metavar='N',
                         default=1,
                         help='total number of GPUs to parallelize model over')
+    parser.add_argument('--numfuncs', type=int,
+                        default=1,
+                        help='total number of function modules')
     parser.add_argument('--checkpoint-suffix', default='',
                         help='suffix to add to the checkpoint file name')
     parser.add_argument('--quantization-config-path', default=None,
