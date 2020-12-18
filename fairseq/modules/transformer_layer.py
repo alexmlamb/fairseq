@@ -335,10 +335,7 @@ class TransformerDecoderLayer(nn.Module):
 
         print('using nfm?', self.use_nfm)
 
-        self.fun_weights = nn.Sequential()
-        self.func_weight.add(nn.Linear(512, 256))
-        self.func_weight.add(nn.ReLU())
-        self.func_weight.add(nn.Linear(256, 1))
+        self.func_weight = nn.Sequential(nn.Linear(512, 256), nn.ReLU(), nn.Linear(256, 1))
         
         self.embed_dim = args.decoder_embed_dim
         self.dropout_module = FairseqDropout(args.dropout, module_name=self.__class__.__name__)

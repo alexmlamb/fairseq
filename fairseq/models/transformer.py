@@ -30,7 +30,7 @@ from fairseq.modules import (
 )
 from fairseq.modules.quant_noise import quant_noise as apply_quant_noise_
 from torch import Tensor
-
+import torch.nn.functional as F
 
 DEFAULT_MAX_SOURCE_POSITIONS = 1024
 DEFAULT_MAX_TARGET_POSITIONS = 1024
@@ -551,7 +551,8 @@ class TransformerDecoder(FairseqIncrementalDecoder):
         self.embed_dim = embed_dim
         self.output_embed_dim = args.decoder_output_dim
 
-
+        self.use_softmax = args.use_softmax
+        self.use_gumbel_softmax = args.use_gumbel_softmax
 
         self.padding_idx = embed_tokens.padding_idx
         self.max_target_positions = args.max_target_positions
@@ -598,11 +599,10 @@ class TransformerDecoder(FairseqIncrementalDecoder):
         else:
             self.layers = nn.ModuleList([])
 
-        self.num_functions = args.numfuncs
+        self.num_functions = 1
         shared_params = args.share_parameters
         print('sharing params across layers?', shared_params)
         print('num functions?', self.num_functions)
-
         if shared_params:
             #first two layers not shared
             self.layers.extend(
@@ -832,14 +832,24 @@ class TransformerDecoder(FairseqIncrementalDecoder):
                 inner_states.append(x_func)
 
                 xfuncs.append(x_func)
+                
+            if self.use_softmax:
+                w = []
+                for func in xfuncs:
+                    w.append(layer[0].func_weight(func))
+                    #w.append(layer[0].func_weight_2(F.relu(layer[0].func_weight_1(func))))
+                wts = F.softmax(torch.dstack(w), dim=2)
+                x = torch.einsum('btem,btm->bte', torch.stack(xfuncs, 3), wts)
+            elif self.use_gumbel_softmax:
+                w = []
+                for func in xfuncs:
+                    w.append(layer[0].func_weight(func))
+                    #w.append(layer[0].func_weight_2(F.relu(layer[0].func_weight_1(func))))
+                wts = F.gumbel_softmax(torch.dstack(w), dim=2)
+                x = torch.einsum('btem,btm->bte', torch.stack(xfuncs, 3), wts)
+            else:
+                x = xfuncs[0] # Just picking first function
 
-            w = []
-            for func in xfuncs:
-                w.append(func.func_weight(func))
-                #w.append(layer[0].func_weight_2(F.relu(layer[0].func_weight_1(func))))
-            wts = F.softmax(torch.dstack(w), dim=2)
-            x = torch.einsum('btem,btm->bte', torch.stack(xfuncs, 3), wts)
-            # x = xfuncs[0] # Just picking first function
             if layer_attn is not None and idx == alignment_layer:
                 attn = layer_attn.float().to(x)
 
