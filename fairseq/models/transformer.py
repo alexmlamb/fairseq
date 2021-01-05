@@ -598,7 +598,7 @@ class TransformerDecoder(FairseqIncrementalDecoder):
         else:
             self.layers = nn.ModuleList([])
 
-        self.num_functions = 2
+        self.num_functions = 1 
         shared_params = False
         print('sharing params across layers?', shared_params)
         print('num functions?', num_functions)
