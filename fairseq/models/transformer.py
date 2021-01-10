@@ -28,6 +28,9 @@ from fairseq.modules import (
     TransformerEncoderLayer,
     RelationalMemory
 )
+
+from fairseq.modules.scoff_blocks_core_bb import BlocksCore
+
 from fairseq.modules.quant_noise import quant_noise as apply_quant_noise_
 from torch import Tensor
 import torch.nn.functional as F
@@ -599,7 +602,15 @@ class TransformerDecoder(FairseqIncrementalDecoder):
         else:
             self.layers = nn.ModuleList([])
 
-        self.num_functions = 1
+        self.num_functions = 2
+
+        self.use_scoff_gating = True
+
+        if self.use_scoff_gating:
+
+            self.scoff_gate = BlocksCore(nhid_in = args.decoder_embed_dim*self.num_functions, nhid=args.decoder_embed_dim, num_blocks_in=self.num_functions, num_blocks_out=1, topkval=1, memorytopk=1, step_att=True, num_modules_read_input=1, inp_heads=1, do_gru=True, do_rel=False, n_templates=2, share_inp=False, share_comm=False, memory_slots=1, num_memory_heads=1, memory_head_size=1, memory_mlp=1, attention_out=args.decoder_embed_dim, version=1)
+
+        
         shared_params = args.share_parameters
         print('sharing params across layers?', shared_params)
         print('num functions?', self.num_functions)
@@ -861,8 +872,22 @@ class TransformerDecoder(FairseqIncrementalDecoder):
                     #w.append(layer[0].func_weight_2(F.relu(layer[0].func_weight_1(func))))
                 wts = F.gumbel_softmax(torch.dstack(w), dim=2)
                 x = torch.einsum('btem,btm->bte', torch.stack(xfuncs, 3), wts)
+            elif self.use_scoff_gating:
+                #treat x as the recurrent hidden state
+                #treat xfuncs as different inputs to read from.  
+                #use a single SCOFF-OF.  
+                self.scoff_gate.blockify_params()
+                #raise Exception('done') #x is bs,T,nhid.  
+                b,T,nh = x.shape
+                x = x.reshape(b*T,nh)
+                xfuncs = torch.cat(xfuncs,dim=2)
+                xfuncs = xfuncs.reshape(b*T,nh*self.num_functions)
+                x,_,_,_,_ = self.scoff_gate(xfuncs,x)
+                x = x.reshape(b, T, nh)
             else:
                 x = xfuncs[0] # Just picking first function
+
+
 
             if layer_attn is not None and idx == alignment_layer:
                 attn = layer_attn.float().to(x)

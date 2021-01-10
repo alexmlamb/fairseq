@@ -36,6 +36,8 @@ from .group_linear_layer import GroupLinearLayer
 from .sparse_attn import SparseAttention
 from .relational_memory import RelationalMemory
 
+#from .scoff_attention import MultiHeadAttention
+
 __all__ = [
     'AdaptiveInput',
     'AdaptiveSoftmax',

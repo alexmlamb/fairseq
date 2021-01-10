@@ -22,5 +22,6 @@ import fairseq.optim.lr_scheduler  # noqa
 import fairseq.pdb  # noqa
 import fairseq.tasks  # noqa
 
+
 import fairseq.benchmark  # noqa
 import fairseq.model_parallel  # noqa
